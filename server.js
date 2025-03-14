@@ -4,7 +4,7 @@ const WebSocket = require('ws');
 const app = express();
 const PORT = 3000;
 
-const symbols = ['btcusdt', 'ethusdt', 'dogeusdt']; // Itt adj hozzá más kriptókat
+const symbols = ['btcusdt', 'ethusdt', 'dogeusdt', 'xrpusdt', 'trumpusdt', 'solanausdt']; // Itt adj hozzá más kriptókat
 const streams = symbols.map(symbol => `${symbol}@trade`).join('/');
 const ws = new WebSocket(`wss://stream.binance.com:9443/stream?streams=${streams}`);
 

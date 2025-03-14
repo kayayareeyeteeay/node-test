@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FundWise - Regisztráció</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center">Regisztráció</h2>
+        <form id="registerForm" class="mt-4">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email cím</label>
+                <input type="email" class="form-control" id="email" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Jelszó</label>
+                <input type="password" class="form-control" id="password" required>
+            </div>
+            <div class="mb-3">
+                <label for="name" class="form-label">Teljes név</label>
+                <input type="text" class="form-control" id="name" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Regisztráció</button>
+        </form>
+        <p id="errorMsg" class="text-danger mt-3 text-center" style="display: none;">Ez az email már regisztrálva van!</p>
+        <div class="text-center mt-3">
+            <p>Már van fiókod?</p>
+            <a href="bejelentkezés.html" class="btn btn-primary">Bejelentkezés</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('registerForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+
+            // Ellenőrizzük az API-n keresztül, hogy van-e már ilyen email
+            const checkResponse = await fetch(`/check-email?email=${email}`);
+            const isEmailTaken = await checkResponse.json();
+
+            if (isEmailTaken.exists) {
+                document.getElementById('errorMsg').style.display = 'block';
+                return;
+            }
+
+            // Felhasználó hozzáadása az adatbázishoz
+            const addUserResponse = await fetch('/add-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, name })
+            });
+
+            if (addUserResponse.ok) {
+                alert('Sikeres regisztráció! Most jelentkezz be.');
+                window.location.href = 'bejelentkezés.html';
+            } else {
+                alert('Hiba történt a regisztráció során.');
+            }
+        });
+    </script>
+</body>
+</html>
