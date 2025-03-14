@@ -1,0 +1,106 @@
+// FundWise Installer Project Structure
+
+// Backend - installLocalDB.js
+const { exec } = require('child_process');
+
+exec('"SqlLocalDB.msi" /quiet', (error) => {
+    if (error) {
+        console.error(`LocalDB telepítési hiba: ${error.message}`);
+        return;
+    }
+    console.log('LocalDB sikeresen telepítve!');
+
+    exec('sqllocaldb create FundWiseInstance', (err) => {
+        if (err) {
+            console.error(`Példány létrehozási hiba: ${err.message}`);
+            return;
+        }
+        console.log('LocalDB példány létrehozva!');
+    });
+});
+
+// Backend - restoreDatabase.js
+const sql = require('mssql/msnodesqlv8');
+const path = require('path');
+
+const config = {
+    server: '(localdb)\\FundWiseInstance',
+    database: 'FundWise',
+    driver: 'msnodesqlv8',
+    options: { trustServerCertificate: true }
+};
+
+async function restoreDatabase() {
+    try {
+        const pool = await sql.connect(config);
+        const backupPath = path.join(__dirname, 'fundwise_backup.bak');
+
+        await pool.query(`CREATE DATABASE FundWise`);
+
+        await pool.query(`
+            RESTORE DATABASE FundWise 
+            FROM DISK = '${backupPath}'
+            WITH REPLACE
+        `);
+
+        console.log('Adatbázis sikeresen importálva!');
+        sql.close();
+    } catch (err) {
+        console.error('Hiba az adatbázis importálásakor:', err);
+    }
+}
+
+restoreDatabase();
+
+// Backend - server.js
+const express = require('express');
+const cors = require('cors');
+const { restoreDatabase } = require('./restoreDatabase');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+restoreDatabase();
+
+app.get('/', (req, res) => {
+    res.send('FundWise API is running...');
+});
+
+app.listen(3000, () => {
+    console.log('FundWise backend fut: http://localhost:3000');
+});
+
+// build_installer.js
+const { exec } = require('child_process');
+
+exec('node ./backend/installLocalDB.js', (error) => {
+    if (error) throw new Error('LocalDB telepítési hiba!');
+
+    exec('node ./backend/restoreDatabase.js', (err) => {
+        if (err) throw new Error('Adatbázis importálási hiba!');
+
+        exec('node ./backend/server.js', () => {
+            console.log('FundWise teljesen telepítve és fut!');
+        });
+    });
+});
+
+// package.json
+{
+  "name": "fundwise_installer",
+  "version": "1.0.0",
+  "main": "build_installer.js",
+  "scripts": {
+    "build": "pkg . --targets node16-win-x64"
+  },
+  "dependencies": {
+    "mssql": "^7.3.0",
+    "express": "^4.17.1",
+    "cors": "^2.8.5"
+  },
+  "pkg": {
+    "scripts": ["backend/installLocalDB.js", "backend/restoreDatabase.js", "backend/server.js"],
+    "assets": ["backend/fundwise_backup.bak", "SqlLocalDB.msi"]
+  }
+}
